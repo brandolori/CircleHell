@@ -244,7 +244,7 @@ void update(int a) {
 	}
 
 	shipAngle = fmod(shipAngle + 2 * PI + shipSpeed, 2 * PI);
-
+	;
 	//collisions
 	bool hit = false;
 	for (auto arc : arcs) {
