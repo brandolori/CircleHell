@@ -140,11 +140,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="fragmentShader_C_M.glsl" />
-    <None Include="fragmentShader_C_M_1.glsl" />
-    <None Include="GeometriaGiocoCorona.pdf" />
     <None Include="packages.config" />
     <None Include="vertexShader_C_M.glsl" />
-    <None Include="vertexShader_C_M_1.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CircleHell.cpp" />
