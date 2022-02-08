@@ -210,8 +210,8 @@ void updateArcs(int a) {
 
 void update(int a) {
 
-	for (int i = 0; i < arcs.size(); i++) {
-		arcs[i].radius -= arcSpeed;
+	for (auto & arc : arcs) {
+		arc.radius -= arcSpeed;
 	}
 
 	if (arcs.size() > 0 && arcs[arcs.size() - 1].radius < 5) {
@@ -247,7 +247,7 @@ void update(int a) {
 	
 	//collisions
 	bool hit = false;
-	for (auto arc : arcs) {
+	for (auto &arc : arcs) {
 		if (arc.radius < shipOrbitRadius && arc.radius + arc.depth > shipOrbitRadius) {
 			if (arc.offset + arc.length > 2 * PI) {
 				if (shipAngle > arc.offset)
