@@ -31,6 +31,17 @@ typedef struct {
 	float depth;
 } ArcData;
 
+// costanti
+const int arcSize = 100;
+const int arcTime = 2000;
+const int arcSpeed = 2;
+const float shipOrbitRadius = 220;
+const float shipMovementForce = 0.01;
+const float shipMaxSpeed = 4 * PI / 60;
+const float timeStep = 1000 / 60;
+const int width = 1280;
+const int height = 720;
+
 // stato della partita
 deque<ArcData> arcs;
 bool pressingRight = false;
@@ -38,33 +49,11 @@ bool pressingLeft = false;
 float shipAngle = PI / 2;
 int score = 0;
 double timePassed = 0;
-
-// costanti
-const int arcSize = 100;
-const int arcTime = 2000;
-const int arcSpeed = 2;
-const float shipOrbitRadius = 220;
-const float shipSpeed = 0;
-const float shipMovementForce = 0.01;
-const float shipMaxSpeed = 4 * PI / 60;
-const float timeStep = 1000 / 60;
-
-// Viewport size
-int width = 1280;
-int height = 720;
+float shipSpeed = 0;
+Point* points = new Point[arcSize];
 
 float randFloat(float range) {
 	return float(rand()) / float((RAND_MAX)) * range;
-}
-
-void initShader(void) {
-	GLenum ErrorCheckValue = glGetError();
-
-	char* vertexShader = (char*)"vertexShader_C_M.glsl";
-	char* fragmentShader = (char*)"fragmentShader_C_M.glsl";
-
-	programId = ShaderMaker::createProgram(vertexShader, fragmentShader);
-	glUseProgram(programId);
 }
 
 void generateArc(float length, int nPoints, float innerRadius, float outerRadius, Point* points) {
@@ -105,11 +94,20 @@ float shipVertices[] = {
 };
 
 void init(void) {
+	GLenum ErrorCheckValue = glGetError();
+
+	char* vertexShader = (char*)"vertexShader_C_M.glsl";
+	char* fragmentShader = (char*)"fragmentShader_C_M.glsl";
+
+	programId = ShaderMaker::createProgram(vertexShader, fragmentShader);
+
+	glUseProgram(programId);
+
 	srand((unsigned)time(0));
 
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 
-	//Genero il VAO
+	//Genero il VAO della navicella
 	glGenVertexArrays(1, &shipVAO);
 	glBindVertexArray(shipVAO);
 	glGenBuffers(1, &shipVBO);
@@ -125,8 +123,6 @@ void init(void) {
 	projMatrix = glGetUniformLocation(programId, "Projection");
 	modelMatrix = glGetUniformLocation(programId, "Model");
 }
-
-Point* points = new Point[arcSize];
 
 void drawScene(void) {
 
@@ -171,6 +167,7 @@ void drawScene(void) {
 		glDeleteBuffers(1, &VBO);
 	}
 
+	// preparo le matrici per la navicella e la disegno
 	Model = mat4(1.0);
 	Model = translate(Model, vec3(cos(shipAngle) * shipOrbitRadius, sin(shipAngle) * shipOrbitRadius, 0));
 	Model = scale(Model, vec3(12.0 * shipScale, 12.0 * shipScale, 1.0));
@@ -191,8 +188,6 @@ void onKeyboardPressed(unsigned char key, int x, int y) {
 	case 'd':
 		pressingRight = true;
 		break;
-	default:
-		break;
 	}
 }
 
@@ -203,8 +198,6 @@ void onKeyboardReleased(unsigned char key, int x, int y) {
 		break;
 	case 'd':
 		pressingRight = false;
-		break;
-	default:
 		break;
 	}
 }
@@ -299,13 +292,11 @@ int main(int argc, char* argv[]) {
 	glutKeyboardFunc(onKeyboardPressed);
 	glutKeyboardUpFunc(onKeyboardReleased);
 
-	glutTimerFunc(1000 / 60, update, 0);
+	glutTimerFunc(timeStep, update, 0);
 	glutTimerFunc(arcTime, updateArcs, 0);
 
-	glewExperimental = GL_TRUE;
 	glewInit();
 
-	initShader();
 	init();
 
 	glEnable(GL_BLEND);
