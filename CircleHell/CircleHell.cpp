@@ -36,15 +36,18 @@ deque<ArcData> arcs;
 bool pressingRight = false;
 bool pressingLeft = false;
 float shipAngle = PI / 2;
+int score = 0;
+double timePassed = 0;
 
 // costanti
-int arcSize = 100;
-int arcTime = 2000;
-int arcSpeed = 2;
-float shipOrbitRadius = 220;
-float shipSpeed = 0;
-float shipMovementForce = 0.01;
-float shipMaxSpeed = 4 * PI / 60;
+const int arcSize = 100;
+const int arcTime = 2000;
+const int arcSpeed = 2;
+const float shipOrbitRadius = 220;
+const float shipSpeed = 0;
+const float shipMovementForce = 0.01;
+const float shipMaxSpeed = 4 * PI / 60;
+const float timeStep = 1000 / 60;
 
 // Viewport size
 int width = 1280;
@@ -54,8 +57,7 @@ float randFloat(float range) {
 	return float(rand()) / float((RAND_MAX)) * range;
 }
 
-void initShader(void)
-{
+void initShader(void) {
 	GLenum ErrorCheckValue = glGetError();
 
 	char* vertexShader = (char*)"vertexShader_C_M.glsl";
@@ -69,8 +71,7 @@ void generateArc(float length, int nPoints, float innerRadius, float outerRadius
 	float angle, distance;
 	bool external = true;
 	float pass = length / nPoints;
-	for (int i = 0; i < nPoints; i++)
-	{
+	for (int i = 0; i < nPoints; i++) {
 		angle = i * pass;
 		distance = external ? outerRadius : innerRadius;
 		points[i].x = cos(angle) * distance;
@@ -121,7 +122,6 @@ void init(void) {
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	Projection = ortho(-float(width) / 2, float(width) / 2, -float(height) / 2, float(height) / 2);
 	projMatrix = glGetUniformLocation(programId, "Projection");
 	modelMatrix = glGetUniformLocation(programId, "Model");
 }
@@ -129,7 +129,15 @@ void init(void) {
 Point* points = new Point[arcSize];
 
 void drawScene(void) {
+
+	float scaleX = 1 + cos(timePassed / 3) / 5;
+	float scaleY = 1 + sin(timePassed / 2) / 5;
+
+	float shipScale = 1 + sin(timePassed * 2.33 * 2 * PI) / 5;
+
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	Projection = ortho(-float(width) * scaleX / 2, float(width) * scaleX / 2, -float(height) * scaleY / 2, float(height) * scaleY / 2);
 
 	glUniformMatrix4fv(projMatrix, 1, GL_FALSE, value_ptr(Projection));
 
@@ -165,7 +173,7 @@ void drawScene(void) {
 
 	Model = mat4(1.0);
 	Model = translate(Model, vec3(cos(shipAngle) * shipOrbitRadius, sin(shipAngle) * shipOrbitRadius, 0));
-	Model = scale(Model, vec3(10.0, 10.0, 1.0));
+	Model = scale(Model, vec3(12.0 * shipScale, 12.0 * shipScale, 1.0));
 	Model = rotate(Model, shipAngle, vec3(0.0, 0.0, 1.0));
 	glUniformMatrix4fv(modelMatrix, 1, GL_FALSE, value_ptr(Model));
 
@@ -176,8 +184,7 @@ void drawScene(void) {
 }
 
 void onKeyboardPressed(unsigned char key, int x, int y) {
-	switch (key)
-	{
+	switch (key) {
 	case 'a':
 		pressingLeft = true;
 		break;
@@ -190,8 +197,7 @@ void onKeyboardPressed(unsigned char key, int x, int y) {
 }
 
 void onKeyboardReleased(unsigned char key, int x, int y) {
-	switch (key)
-	{
+	switch (key) {
 	case 'a':
 		pressingLeft = false;
 		break;
@@ -210,27 +216,19 @@ void updateArcs(int a) {
 
 void update(int a) {
 
-	for (auto & arc : arcs) {
+	timePassed += timeStep / 1000;
+
+	for (auto& arc : arcs) {
 		arc.radius -= arcSpeed;
 	}
 
 	if (arcs.size() > 0 && arcs[arcs.size() - 1].radius < 5) {
 		arcs.pop_back();
+		score += 1;
+		cout << "punteggio = " << score << endl;
 	}
 
 	//ship movement
-	if (shipSpeed > 0) {
-		shipSpeed -= shipMovementForce / 2;
-		if (shipSpeed < 0)
-			shipSpeed = 0;
-	}
-
-	if (shipSpeed < 0) {
-		shipSpeed += shipMovementForce / 2;
-		if (shipSpeed > 0)
-			shipSpeed = 0;
-	}
-
 	if (pressingLeft) {
 		shipSpeed += shipMovementForce;
 	}
@@ -243,11 +241,23 @@ void update(int a) {
 		shipSpeed = sign(shipSpeed) * shipMaxSpeed;
 	}
 
+	if (shipSpeed > 0) {
+		shipSpeed -= shipMovementForce / 2;
+		if (shipSpeed < 0)
+			shipSpeed = 0;
+	}
+
+	if (shipSpeed < 0) {
+		shipSpeed += shipMovementForce / 2;
+		if (shipSpeed > 0)
+			shipSpeed = 0;
+	}
+
 	shipAngle = fmod(shipAngle + 2 * PI + shipSpeed, 2 * PI);
-	
+
 	//collisions
 	bool hit = false;
-	for (auto &arc : arcs) {
+	for (auto& arc : arcs) {
 		if (arc.radius < shipOrbitRadius && arc.radius + arc.depth > shipOrbitRadius) {
 			if (arc.offset + arc.length > 2 * PI) {
 				if (shipAngle > arc.offset)
@@ -262,13 +272,14 @@ void update(int a) {
 	}
 
 	if (hit) {
-		cout << "colpito" << endl;
-		cout << shipAngle << endl;
+		arcs.clear();
+		score = 0;
+		cout << "punteggio = " << score << endl;
 	}
 
 	glutPostRedisplay();
 
-	glutTimerFunc(1000 / 60, update, 0);
+	glutTimerFunc(timeStep, update, 0);
 }
 
 int main(int argc, char* argv[]) {
